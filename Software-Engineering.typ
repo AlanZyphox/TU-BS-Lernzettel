@@ -1,5 +1,8 @@
-#set text(font: "Inter")
+// #set text(font: "Inter", fill: white)
+// #set page(fill: black)
+#set text(font: "Inter", size: 1.25em)
 #set grid(column-gutter: 1em, row-gutter: 1em)
+#set page(margin: 4em)
 
 #align(center, text([Software Engineering], weight: "bold", size: 16pt))
 
@@ -96,16 +99,36 @@ Ablauf aller Kanten
 
 Ablauf aller Knoten
 
-= Lehman's Law of Software
+= Lehman's Law of Software Evolution
 
 + Continuous Change
 + Increasing Complexity
 + Self Regulation
+    - Productivity plateaus even when you add more developers
+    - Technical debt eventually forces slowdowns
+    - Long-running systems evolve in surprisingly consistent patterns
 + Conservation of organizational stability
+    - Over the lifetime of a software system, the average effective rate of development remains roughly constant, regardless of how much work is waiting to be done.
+    - Several forces balance each other out:
+        - Communication overhead grows with team size
+        - System complexity makes changes harder and slower
+        - Cognitive limits of developers
+        - Organizational processes (reviews, coordination, approvals)
 + Conservation of familiarity
 + Continuous growth
 + Declining quality
-+ Feedbakc system
++ Feedback system
+
+Beispiele:
+
+Conservation of organizational stability:
+- A team delivers ~10 meaningful changes per month.
+- Product demands 20.
+- The result isn't 20 changes - it's:
+    - 10 rushed changes or
+    - 10 changes with more bugs or
+    - burnout and turnover
+- The system “protects” its stability.
 
 = Software Development Practices
 
@@ -127,16 +150,18 @@ Reproduzierbare und standartisierte Infrastruktur und Einstellungen
 
 == Wasserfallmodell
 
-#let lr = sym.arrow.l.r
+#image("SE-Wasserfallmodell.png")
 
-#grid(
-    columns: 2,
-    [], [Requirements Analysis],
-    lr, [System and Software Design],
-    lr, [Implementation and Unit Testing],
-    lr, [Integration and System Testing],
-    lr, [Operation and Maintenance],
-)
+// #let lr = sym.arrow.l.r
+
+// #grid(
+//     columns: 2,
+//     [], [Requirements Analysis],
+//     lr, [System and Software Design],
+//     lr, [Implementation and Unit Testing],
+//     lr, [Integration and System Testing],
+//     lr, [Operation and Maintenance],
+// )
 
 Geeignet für:
 - eingebettete Systeme
@@ -152,6 +177,14 @@ Nachteile:
 - Probleme in einer Phase haben Auswirkungen auf folgenden Phasen
 - Phasen können nicht parallel bearbeitet werden
 - Änderungen in vorherigen Phasen schwer möglich
+
+== V-Modell
+
+#image("SE-V-Modell.png")
+
+== Scrum
+
+Darunter: Kanban, Extreme-Programming
 
 = Risk- und People Management
 
