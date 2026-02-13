@@ -26,13 +26,14 @@
 
 == Kategorien
 
-- Freeware
-- Kommerziel
-- Open Source
-- Closed Source
+- Freeware/Kommerziel
+- Open Source/Closed Source
 - UI/API
-- System Software
-- Application Software
+- System Software/Application Software
+- Standalone/Integrated
+- Monolithic/Distributed
+- Data Intesive/Computation Intesive
+- Generic/Customized
 
 == Code Smells
 
@@ -226,7 +227,7 @@ Beispiele:
 
 #image("Non-Functional-Requirements.png")
 
-== Organisatorische
+=== Organisatorische
 
 Rahmenbedingungen der Organisation
 
@@ -235,7 +236,7 @@ Rahmenbedingungen der Organisation
 - Entwicklung nach Scrum
 - nur Verwendung einer spezifischen API
 
-== Externe
+=== Externe
 
 Äußere Vorgaben, Gesetze, Normen
 
@@ -243,13 +244,15 @@ Rahmenbedingungen der Organisation
 - verhlüsselte Übertragung der Daten
 - Kompatibilität mit offiziellen Schnittstellen
 
-== Produktanforderungen
+=== Produktanforderungen
 
 Qualität oder Eigenschaft eines Systems
 
 - Reaktion innerhalb von X Sekunden
 - Erkennungsrate von mindestenz XX%
 - maximaler Akkuverbrauch
+
+#pagebreak()
 
 == Anforderungsmanagement
 
