@@ -3,6 +3,7 @@
 #set page(margin: 4em)
 #set quote(block: true) // actually show attribution in quotes
 #show link: underline
+#set line(length: 100%)
 
 #align(center, text([Software Engineering], weight: "bold", size: 16pt))
 
@@ -114,7 +115,9 @@ Bereitstellung von weitergehenden Diensten, Programmen, und Bibliotheken zur Ver
 
 == Betribssystem-Server
 
-Erweiterung der Abstraktionen und Bereitstellung von Strategien zur Verwaltung und Zuteilung der (virtuellen) Hardwareressourcen and Benutzer und Prozesse
+Erweiterung der Abstraktionen und Bereitstellung von Strategien zur Verwaltung und Zuteilung der (virtuellen) Hardwareressourcen and Benutzer und Prozesse.
+
+Läuft im System- und Nutzermodus
 
 - Prozessverwaltung
 - Dateisysteme (VFS)
@@ -123,10 +126,396 @@ Erweiterung der Abstraktionen und Bereitstellung von Strategien zur Verwaltung u
 
 == Betribssystem-Kern
 
-Steuerung der grundlegenden Mechanismen für Multiplexing und Isolation der Hardwareressourcen
+#underline([Hauptaufgabe]): Steuerung der grundlegenden Mechanismen für Multiplexing und Isolation der Hardwareressourcen.
+
+Immer im Systemmodus.
 
 - Prozessfäden
 - Signale & IPC
 - Synchronisation
 - Adressräume Speicher
 - Gerätezugriff
+
+== weitere Dienste und Systemprogramme
+
+- e.g. Shell, Benutzeroberfläche
+- Hintergrundprozesse (UNIX: Daemon)
+- Systemprogramme, Editoren (Systemsteuerung)
+- gemeinsame Bibliotheken (shared library)
+
+= Architekturen
+
+Varianten: Monolithisch, Mikrokernel, ...
+
+Unterschiede: Granulatirät der Schutzdomäne und Privilegienebenen #underline([innerhalb]) des Betriebssystems
+
+Beeinflussung der Auslegungen im Betriebssystem, *nicht* die Funktionalität der Systemfunktion
+
+#{
+    set list(marker: ([->], [•]))
+    [
+        - Funktion transparent für Anwendungen und Anwender
+        - Unterschiede in *nichtfunktionalen* Eigenschaften
+            - Robustheit
+            - Geschwindigkeit
+            - Angriffssicherheit
+            - Speicherbedarf
+    ]
+}
+
+== Monolithisch
+
+-> gesamtes Betriebssystem im Systemmodus
+
+UNIX, Linux
+
+Server im Systemmodus, Reduktion der Laufzeitkosten des Betriebssystems
+
+= Multiplexing und Isolation durch Prozesse
+
+#underline([Konzeptionelle Sicht]): Nebenläufige Prozesse
+
+#underline([Realzeit Sicht]): Betriebssystem multiplext CPU\
+(physische Zeit auf realer CPU)
+
+Repräsentation virtueller Hardwareressourcen durch grundlegende Konzepte des Betriebssystems:
+
+#grid(
+    columns: 3,
+    [Prozess (Addressraum & Fäden)], [->], [virtueller Computer],
+    [Datei], [->], [virtuelles Peripheriegerät],
+)
+
+== Dateien
+
+=== EDV-Definition
+
+- aus sachlich zusammenhängenden, (un-) strukturierten Daten
+- idR persisten
+- Verarbeitung durch Prozesse bei der Ausführung von Programmen
+
+-> Unterscheidung nur von echten Dateien
+- nicht ausführbare Datei: Verarbeitung durch ein Programm
+- ausführbare Datei: Instruktionen zur Ausführung durch einen Prozess
+
+=== Pseudodateien
+
+- Gerätedatei: physikalisches oder virtuelles Gerät (Festplatte, Drucker)
+- `procfs` Datei: Zustandsvariable des Betribssystem-Kerns (Anzahl der Prozesse)
+- Kommunikationskanal: Kommunikation zwischen Prozessen (IPC) (Pipe, Socket, stdout)
+
+=== Dateisystem
+
+Prinzip zur strukturellen Ablage von Informationen auf einem Datenträger.
+
+- Abbildung von Dateien und Verzeichnissen auf das Format des Datenträgers.
+- Bereitstellung von Metainformationen zur Einbindung in ein Betribssystem
+
+wesentliches internes Strukturelement: Block
+- FS Aufgabe: Abbildung von Dateien auf Blöcke
+- FS Aufgabe: Allokation und Freigabe von Blöcken
+- Element einer Datenträgeroperation
+- typisch 512B - 64KiB
+
+Benötigt Verwaltungsinformationen
+- Tabelle der Indexknoten
+- Liste der freien Blöcke
+- Liste der fehlerhaften Blöcke
+- zentrale Metadaten (super block)
+
+==== Kontext
+
+- Kontext definiert flachen Namensraum
+- Erstellung eines Namensraums hierarchiescher Struktur durch Rekursion
+- Arbeitsverzeichnis als impliziter Startkontext für den Pfad
+
+==== virtuelles Dateisystem
+
+VFS; Anwender und Anwendungen benutzen idR nur das VFS
+
+Abstraktionsschicht des Betribssystems für die Integration und Verwendung von Dateisystemen
+
+- virtualisierte Schnittstelle für den Zugriff auf konkrete Dateisysteme
+- Einbindung durch Montieren
+- Einbindung in den Dateibaum
+- Überwachung und Protokollierung des Zugriffs auf Dateien
+
+==== Sichtweisen
+
+===== Benutzersicht
+
+persistenz von Daten
+- Sicherung und Benennung von Ergebnissen eines Programmablaufes auf einen Hintergrundspeicher
+- spätere Wiederverwendung der Ergebnisse in anderem Programm
+
+====== Datein als benannte Objekte
+
+Mehrwortbenennung:
+
+- ein Wort:
+    - Name ist relativ zu bestimmten Kontext
+    - lokal eindeutig, global mehrdeutig
+- mehrere Wörter:
+    - Pfadname im Namensraum zum benannten Ding
+    - global eindeutige Bezeichnung des Namenskontextes
+- Trenntext als Separator
+    - `/` in UNIX
+    - Vorgabe von Alphabet und maximale Wortlänge durch Namensverwaltung
+    - keine weitere Interpretation der Namen
+
+Verknüpfungen sind benannt, nicht Objekte\
+Verzeichnis als Katalog von Verknüpfungen
+
+Verzeichnisse enthalten:
+- Verweis auf sich selbst (`.`)
+- Verweis auf übergeordnetes Verzeichnis (`..`)
+- Verweise auf Dateien und Verzeichnisse
+
+====== Links
+
+======= Hard Links
+
+- Verweis auf ein Dateiobjekt
+- exklusiv auf Dateien
+
+-> #underline([Dateibaum ist ein azyklischer Graph])
+
+- Anzahl der Links auf ein Dateiobjekt wird vermerkt
+-> Freigabe, nur wenn keine Links vorhanden sind
+
+======= Soft Links
+
+- Verweis auf einem Pfad
+- spezielle Datei
+- Verweis auf Verzeichnisse und andere Dateisysteme
+- kein Einfluss auf Linkanzahl
+
+===== Anwendungssicht
+
+Schnittstelle zum Zugriff auf Daten
+- standartisierte Schnittstelle zur einfacheren Softwareentwicklung
+- Trennung von Programmtext und Daten(zugriffen)
+
+===== Systemsicht
+
+Virtualisierung des Zugriffs auf Daten
+- Multiplexing & Isolation von Geräten, Ressourcen, und Daten
+- Vereinfachte Einbettung weitere Geräte und Ressourcen
+
+====== Datenstrukturen
+
+======= Indexknotentabelle
+
+i-node table
+
+zentrale Datenstruktur: statisches Array von Indexknoten
+- Indexknoten: Deskriptor des Objektes
+- Indexknotennummer: eindeutige Referenz des Objektes
+
+======= Verzeichnis
+
+Abbildungstabelle
+- Übersetzung symbolisch repräsentierter Namen in Indexknotennummern
+- spezielle Datei der Namensverwaltung des Betribssystems
+
+======= Datei
+
+abgeschlossene Einheit zusammenhängender Daten
+- beliebige Repräsentation, Struktur, und Bedeutung
+
+====== Implementierung
+
+Namensbindung:
+- Abbildung der symbolischen in numerische Adresse
+    - Assoziation eines Pfadnamen mit einem Indexknoten
+    - beim Erzeugungszeitpunkt
+
+Namensauflösung
+- Umsetzung der symbolischen in numerischen Adressabbildung
+    - Lokalisierung eines Indexknoten anhand eines Pfadnamen
+    - beim Benutzungszeitpunkt
+
+======= Verzeichnisse
+
+Definierung von Paaren: Name -> Indexknotennummer
+- von Namensverwaltung als Dateien abgelegt
+- Referenzierung mit Indexknotennummer
+    - `/` besitzt Indexknotennummer 2
+- Dateiattribute im Indexknoten abgelegt, nicht im Verzeichnis
+- Verzeichniseintrag kann für schnelleren Zugriff Kopien bereithalten
+
+-> tatsächlicher Namensraum ist flach (durchnummerierte Dateien)
+
+======= Dateiattribute
+
+Aggregation von Attribute eines Objektes in Indexknoten
+- Typ der Datei (reguläre Datei, Verzeichnis, soft link, Gerät, Pipe, Socket)
+- Anzahl der Verzeichnisverweise
+- Größe der Datei
+- Eigentümer der Datei (user ID)
+- Gruppenzugehörigkeit (group ID)
+- Rechte (Eigentümer, Gruppe, Welt)
+- Zeitstempel (letzter Zugriff, Änderung, Attributänderung)
+
+Weitere Attribute sind Implementierungsspezifisch
+- zusätzliche Metadaten
+- Insbesondere jedoch doe Objektdatenverweise (z.B. Festplattenblöcke) // ???
+
+Indexknotennummer ist eindeutig innerhalb des Dateisystems
+
+===== Offene Dateien
+
+Lesen & Schreiben erfordert #underline([Dateideskriptor])
+- nichtresidentes Betriebsmittel
+- Repräsentation einer prozesslokalen Befähigung für Zugriff auf eine geöffnete Datei
+- Anforderung: `open`, `creat`, `dup`
+- Freigabe: `close`, Prozessbeendigung
+- Implizit: 3 geöffnete FD's: 1: `stdin`, 2: `stdout`, 3: `stderr`
+
+FD: interner Verweis auf Dateiobjekt
+- nichtresidentes Betriebsmittel
+- systemweite Repräsentation einer geöffneten Datei
+- Erzeugung: implizit (erstes öffnen der Datei)
+- Freigabe: implizit (Freigabe des letzten FD's)
+
+-> Deskriptortabelle pro Prozess (file descriptor table | fd-table)\
+-> Systemweite Dateiobjekttabelle (open file table | of-table)
+
+===== Speicherung von Dateien
+
+Verwaltung von Datenträgerspeicher in Form von Blöcken
+
+Abbildung einer Datei auf Folge von Blöcken
+- Entstehung von Verschnitt: keine Vollständige Nutzung jedes Blocks
+- Speicherung und Verwaltung der Blockfolge notwendig
+
+====== Kontinuierliche Speicherung
+
+z.B. CDFS
+
+einfachste Speicherverwaltung
+- Blockfolge: Blöcke mit aufsteigenden Blocknummern
+- Verwaltung: Tupel aus Startblock und Anzahl der Folgeblöcke
+
+Hoher Durchsatz, aufwendige Freispeicherverwaltung
+- schnelles kontinuierliches Lesen
+- keine leichte Vergrößerung von Dateien
+
+-> Einsatz auf RO Datenträgern (DVD), serielle Datenträger (Magnetbänder)
+
+====== Verkettete Speicherung
+
+- Blockfolge: einfach verkettete Liste
+- Verwaltung: Block entält Zeiger auf den nachfolgenden Block
+
+Größenänderung einfach, aber Mischung von Nutz- und Verwaltungsdaten
+- Nutzdatengröße ist keine Zweierpotenz
+    - ungünstiges Paging
+- hohe Zugriffzeit: lineare Suche
+- hohe Fehleranfälligkeit
+    - Zerstörung gesamter Kette durch einen defekter Block
+
+======= FAT
+
+File Allocation Table
+
+Variante der verketteten Speicherung
+- Blockfolge: einfach verkettete Liste
+- Verwaltung: Speicherung der Blockfolge in separaten Blöcken
+
+- vollständige Nutzung des Datenblocks
+- Reduktion Fehleranfälligkeit durch mehrfache Speicherung der FAT
+
+====== Indizierte Speicherung
+
+ext2, ext3, ext4
+
+- Blockfolge: Ablage in speziellen Indexblöcken
+- Verwaltung: Verweis auf Daten- und Indexblöcke im Indexknoten
+    - kleine Dateien: direkte Verweise
+    - große Dateien: indirekte Verweise
+        - Pointer auf Tabelle mit Verweisen
+        - maximal dreifach indirekt
+
+- indirekter Zugriff auf Datenblöcke\
+    -> X zusätzliche Blockzugriffe
+- Beschränkung der Anzahl der Indexeinträge\
+    -> Beschränkte Dateigröße
+
+====== Freispeicherverwaltung
+
+Variante: Bitmaps
+- Markierung der Blöcke nach Belegung
+- Metadatei des Dateisystems
+- NTFS: `$Bitmap`
+
+Variante: Verkettete Listen
+- Repräsentation der Freien Blöcke durch verkettete Listen
+- Optimierung: Indizierung freier Blöcke
+
+====== Dateisystemorganisation
+
+#image("UNIX-System-V.png")
+
+#image("Linux-extX.png")
+
+== Prozesse
+
+=== Zustände
+
+#grid(
+    columns: 2,
+    [Laufend], [Prozess wird ausgeführt],
+    [Blockiert], [Prozess kann ausgeführt werden],
+    [Bereit], [Prozess wartet auf Bedingung der IO Aktivität],
+)
+
+== Scheduling
+
+Ein Scheduling Algorithmus characterisiert sich durch die Reihenfolge von Prozessen in der Warteschlange und die Bedingungen, unter denen die Prozesse der Warteschlange zugeführt werden.
+
+Die Bereitliste (ready list) definiert einen Ablaufplan (schedule) zur Prozessorteilung, der zur Laufzeit fortgeschrieben wird.\
+-> Ordnung nach Ankunft, Termin, Dringlichkeit (= #underline([schedule Strategie]))
+
+=== Ziele
+
+#grid(
+    columns: 3,
+    [Benutzerorientiert], [->], [kurze Antwortzeiten],
+    [Systemorientiert], [->], [hohe CPU-Auslastung],
+)
+
+Kein Planungsalgorithmus kann alle Anforderungen erfüllen
+
+#image("Simultanverhalten.png")
+
+== Speicher
+
+=== Hierarchie
+
++ Intern: Register, Cache
++ Vordergrundspricher: RAM, ROM, Flash
++ Hintergrundspeicher: Festplatte, Solid-State-Disk
++ Wechselspeicher: Magnetband, DVD, Blu-Ray, USB-Stick
++ Netzwerkspeicher: Netzwerklaufwerk/-dateisystem, Cloud-Speicher
+
+- steigende Zugriffzeiten
+- steigende Kapazität
+- sinkender Preis pro Bit
+
+=== Verwaltung
+
+==== Adressabbildung
+
+- logische Adressen auf physische Adressen
+- Relokation von Code und Daten
+
+==== Platzierungsstrategie
+
+- In welcher Lücke soll Speicher reserviert werden?
+- Kompaktifizierung verwenden?
+- Minimierung des Fragmentierungsproblems
+
+==== Ersetzungsstrategie
+
+- Welcher Speicherbereich könnte Sinnvoll ausgelagert werden?
