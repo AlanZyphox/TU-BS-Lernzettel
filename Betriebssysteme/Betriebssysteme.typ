@@ -5,6 +5,9 @@
 #show link: underline
 #set line(length: 100%)
 
+#let E2 = $E_2$
+#let E3 = $E_3$
+
 #align(center, text([Software Engineering], weight: "bold", size: 16pt))
 
 #outline()
@@ -29,8 +32,8 @@ Schließen der semantischen Lücke durch #link(<Interpreter>, [Interpreter]) und
 
 == Multiplexer und Virtualisierer
 
-- Angebot einer erweiterten Maschinenschnittstelle (teilinterpretierte virtuelle Maschine $E_3$) für Programme / Anwender
-- Durchgabe des Befehlssatzes der Hardware ($E_2$) und Erweiterung um weitere Syscalls
+- Angebot einer erweiterten Maschinenschnittstelle (teilinterpretierte virtuelle Maschine #E3) für Programme / Anwender
+- Durchgabe des Befehlssatzes der Hardware (#E2) und Erweiterung um weitere Syscalls
 - Virtualisierung (Mehrbenutzerbetrieb) der Ressourcen der Hardware (Prozesse, Speicher, IO-Geräte,...)
 - Isolierung der virtuellen Hardwareressourcen durch räumliche und zeitliche Schutzmechanismen voneinander (Mehrbenutzerbetrieb)
 - Repräsentation der virtuellen Hardwareressourcen durch grundlegenden Konzepte (Abstraktionen) eines Betriebssystems
@@ -45,11 +48,11 @@ Schließen der semantischen Lücke durch #link(<Interpreter>, [Interpreter]) und
 - vertikale Isolation: Aufteilung in Benutzer- und Systemmodus
     - Benutzermodus:
         - spezieller CPU-Modus
-        - Interpretation von $E_2$ Anweisungen vom Betriebssystem anstatt Durchgabe
+        - Interpretation von #E2 Anweisungen vom Betriebssystem anstatt Durchgabe
         - Manipulation von Adressräumen -> räumliche Isolation, Speicher
         - Manipulation der Unterbrechungsbehandlung -> zeitliche Isolation, CPU
     - Systemmodus:
-        - Verfügbarkeit aller $E_2$ Anweisungen
+        - Verfügbarkeit aller #E2 Anweisungen
 
 - Anwenderprozesse immer im Nutzermodus
 - Systemdienste (teilweise) im Systemmodus
@@ -86,6 +89,29 @@ Gegebenfalls Vorübersetzung durch einen Kompiler für günstige Repräsentation
 - *Speicher & Objekte*: Wie kann man Daten ablegen und wieder aufrufen?
 - *Befehle & Operationen*: Wie kann man Daten miteinander kombinieren?
 -> Implementation durch einen "Prozessor" (#link(<Interpreter>, [Interpreter]) oder #link(<Compiler>, [Compiler]))
+
+== privilegierte und unprivilegierte Befehle
+
+Befehle der Maschinenprogrammebene #E3
+- "normale" Befehle der Befehlssatzebene #E2
+    - Ausführung vom Prozessor
+    - unkritische Befehle, Ausführbar in jedem Kontext des Prozessors
+- "unnormale" Befehle der Befehlssatzebene #E2
+    - Ausführung vom Betribssystem
+    - privilegierte Befehle, nur im Systemmodus Ausführbar
+
+=== privilegierte Befehle
+
+Bereitstellung von Prozessen, Dateien, (Schutz)
+- Betribssystem ist Interpreter der #E3 Befehle
+- Umsetzung benötigt privilegierte #E2 Befehle
+
+Betribssystem ist nur ausnahmsweise Aktiv
+- Aktivierung von Außerhalb nötig
+    - explizit: synchroner Systemaufruf (Syscall)
+    - implizit: synchrone Programmunterbrechung (trap)
+    - implizit: asynchrone Programmunterbrechung (interrupt)
+-> immer Deaktivierung von alleine
 
 = Aufgabenteilung
 
@@ -618,7 +644,7 @@ Bündlung aller zur partiellen Virtualisierung relevanten Attribute im Prozessko
     - Name, Domäne, Zugehörigkeit, Befähigung, Zugriffsrechte, Identifikation
 
 ein Prozesszeiger pro Prozessor
-- Verwaltung vom Betribssystem 
+- Verwaltung vom Betribssystem
 - Identifikation des laufenden Prozessobjektes
     - zeigt auf gegenwärtigen Prozess
     - ähnlich: Befehlszeiger der CPU zeigt auf laufenden Befehl
@@ -686,7 +712,7 @@ Prozessobjekt
 
 - von der Anwendung verwalteter CPU-Kontext für einen Programmstrang
 - Manifest nur im Anwendungsadressraum
-- Virtualisierung der virtuellen CPU oberhalb der Maschinenebene $E_3$
+- Virtualisierung der virtuellen CPU oberhalb der Maschinenebene #E3
 - Unbekannt beim Betriebssystem
 - Ausführung in einem konkreten Faden
 
@@ -720,3 +746,194 @@ Prozessobjekt
 ==== Ersetzungsstrategie
 
 - Welcher Speicherbereich könnte Sinnvoll ausgelagert werden?
+
+= Signale
+
+virtuelle Ausnahme des Prozessors
+
+== Sichtweisen
+
+=== Benutzersicht
+
+seltene Ereignisse
+
+=== Anwendungssicht
+
+Signal vom Betribssystem
+- Rückruf des Betribssystems an ein Programm in Ausführung
+- Auslösung durch
+    - synchrones Ereignis: unmittelbarer Zusammenhang mit der Programmausführung
+    - asynchrones Ereignis: kein Zusammenhang mit der Programmausführung
+
+=== Systemsicht
+
+Aktivierung des Betribssystems
+- Aufruf des durch das Betribssystem realisierten Interpreters
+- synchron durch laufende Prozess (implizit und explizit)
+- asynchron durch ein Signal der Nebenläufigen Hardware
+
+=== synchrones Signal
+
+Auslösung durch Aktivität des eigenen Prozesses
+- durchgereichter #E2 trap bei Ausführung einer Instruktion durch die CPU
+    - `SIGFPE`: Divison durch 0
+    - `SIGSEGV`: segmention fault
+    - `SIGILL`: illegal instruction
+- zusätzliche #E3 trap bei Ausführung eines syscalls durch das Betribssystem
+    - `SIGPIPE`: pipe error
+    - `SIGSYS`: illegal syscall
+
+=== asynchrones Signal
+
+Auslösung durch externes Ereignis oder anderer Prozessor
+- durchgereichtes asynchrones Ereignis des $L_2$ Prozessors (CPU, Hardware Ereignis)
+    - `SIGINT`: CTRL+C gedrückt
+    - `SIGALRM`: timer expired
+- zusätzliche asynchrone Ereignisse eines #E3 Prozessors (anderer Prozess, Betribssystem)
+    - `SIGCHLD`: child stopped / terminated
+    - `SIGTERM`: terminate
+    - `SIGHUP`: hangup
+    - `SIGUSR1`, `SIGUSR2`: user signal 1 / 2
+- Unterdrück- und Verzögerbar wie IRQ's
+    - Synchronisation erforderlich
+    - nicht-unterdrück/-verzögerbare Signale existieren (`SIGKILL`, `SIGSTOP`)
+
+==== technische Sicht
+
+Signalbehandlung erfolgt immer beim Verlassen des Kerns\
+-> wenn #E3 Prozessor (Prozess) Arbeit wiederaufnimmt
+
+Genauer Ablauf abhängig vom Zustand des Prozesses
+#grid(
+    columns: 2,
+    [laufend],
+    [
+        - synchrone und asynchrone Signale
+        - unmittelbarer Start des Behandlers
+    ],
+
+    [bereit],
+    [
+        - nur asynchrone Signale
+        - Vormerkung im Prozesskontrollblock
+        - unmittelbare Behandlung, wenn der Prozess eingelasted wird
+    ],
+
+    [blockiert],
+    [
+        - Ausführung eines Systemaufrufs durch Prozess
+        - Unterbrechungen des IO Systemaufruf (wenn möglich)
+        - Prozess wird bereit gestellt
+        - Entscheidung über Fortsetzung des Systemaufrufs (`SA_RESTART`) oder Abbruch mit Rückgabewert `EINTR` bei der Installation des Signalbehandlers
+    ],
+)
+
+=== Nebenläufigigkeit durch Signale
+
+Erzeugung von Nebenläufigkeit durch asynchrone Signale innerhalb eines Prozesses
+- Problem ähnlich wir IRQ auf #E2
+    - Erstellung eines inkonsistenten Zustands möglich
+=> keine Verwendung von sehr vielen Funktion der C-Bibliothek innerhalb Signalbehandlern
+- Heap: `malloc`, `free`
+- IO: `printf`, `puts`, `scanf`, `perror`
+- nur `signal-safety (7)` sind erlaubt
+
+== Ausnahmen und Unterbrechungen
+
+Analog: Signale für Maschinenprogrammebene #E3
+
+Unterscheidung von drei Fällen von Ausnahmen
+
+#grid(
+    columns: (1fr, 1fr, 1fr),
+    align(center, [trap/exception]), align(center, [syscall/instruction trap]), align(center, [hardware interrupt]),
+    [
+        - Seitenfehler
+        - Schutzfehler
+        - Divison durch 0
+    ],
+    [
+        - Systemaufruf
+        - Haltepunktbefehl
+    ],
+    [
+        - Zeitgeber abgelaufen
+        - Taste gedrückt
+        - IO Operation abgeschlossen
+    ],
+
+    [-> Befehl kann nicht ausgeführt werden],
+    [-> Befehl führt zu gewollten Moduswechsel],
+    [-> Gerät erfordert Aufmerksamkeit],
+)
+
+Allgemein: Behandlung von Ausnahmen ist für Anwendungen zwingend und prozessorabhängig
+- Aufwerfen (raising) einer Ausnahme durch realen (CPU) oder abstrakten (Betriebssystem) Prozessor
+    - CPU: Ausnahmen der Hardware (interrupt, trap, syscall)
+    - Betriebssystem: Ausnahmen der Software (UNIX/POSIX: Signale)
+- Behandlung erfolgt immer durch abstrakten Prozessor
+    - CPU-Ausnahmen: #E2 (durch Betriebssystem)
+    - Betribssystem-Ausnahmen: #E3 (durch Prozess)
+
+Behandlung durch Ausnahmebehandler
+
+#grid(
+    columns: 2,
+    [syscall], [Ausführung der gewünschten Systemfunktion auf #E2, Rückkehr],
+    [trap], [Fehler beheben auf #E2, Wiederholen des Befehls oder abort],
+    [interrupt], [Verarbeitung des externen Ereignisses auf #E2, Rückkehr],
+    [Signal], [Behandlung auf #E3, Rückkehr, Wiederholen, oder abort],
+)
+
+#linebreak()
+
+Aktivierung des Ausnahmebehandlers durch unbedingte Verzweigung
+
+CPU-Ausnahme
+- Sprung über Vektor der interrupt-vector-table (IVT)
+    - entält Adressen von Unterprogrammen (selten: direkt Befehle)
+    - systemweit im RAM oder ROM
+        - spezielles CPU Register entält Basisadresse
+    - Modifikation der IVT ist eine privilegierte #E2 Anweisung
+
+Betribssystem Signal
+- POSIX: Registrierung mit `sigaction` für den Prozess
+- Ausführung nach dem Auftreten des Signals beim Einlasten des Prozesses
+
+=== syscall
+
+- explizite Aktivierung durch die Anwendung
+- synchron zum Kontrollfluss
+    - effektiv: Prozeduraufruf mit Moduswechsel
+
+=== trap
+
+- implizite Aktivierung durch die CPU
+- synchron zum Kontrollfluss, wenn #E2 Befehl nicht ausführbar ist
+- Beispiele
+    - Divison durch 0
+    - Seitenfehler (page fault)
+    - Schutzverletzung
+    - privilegierter Befehl im Benutzermodus
+    - unbekannter Befehl
+- nicht unterdrückbar oder verzögerbar\
+    -> Behandlung ist notwendig
+
+=== interrupt
+
+- implizite Aktivierung durch CPU
+    - asynchrones Ereignis
+- asynchron zom Kontrollfluss
+- Beispiele
+    - Zeitscheibe abgelaufen
+    - Netzwerkpaket eingetroffen
+    - Taste gedrückt
+    - Inter-Process-Interrupt (IPI) durch Programm auf einem anderen Kern
+- unterdrückbar und verzögerbar durch privilegierte #E2 Operationen
+
+=== Synchronisation
+
+asynchrone Unterbrechungen jederzeit (nach jeder #E2 Operation) möglich\
+-> Problematisch: gemeinsam verwendeter Zustand\
+=> kritische Gebiete Schützen
+- Verzögerung von Unterbrechungen
