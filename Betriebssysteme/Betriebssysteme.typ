@@ -696,37 +696,6 @@ Prozessobjekt
 - Unbekannt beim Betriebssystem
 - Ausführung in einem konkreten Faden
 
-== Speicher
-
-=== Hierarchie
-
-+ Intern: Register, Cache
-+ Vordergrundspricher: RAM, ROM, Flash
-+ Hintergrundspeicher: Festplatte, Solid-State-Disk
-+ Wechselspeicher: Magnetband, DVD, Blu-Ray, USB-Stick
-+ Netzwerkspeicher: Netzwerklaufwerk/-dateisystem, Cloud-Speicher
-
-- steigende Zugriffzeiten
-- steigende Kapazität
-- sinkender Preis pro Bit
-
-=== Verwaltung
-
-==== Adressabbildung
-
-- logische Adressen auf physische Adressen
-- Relokation von Code und Daten
-
-==== Platzierungsstrategie
-
-- In welcher Lücke soll Speicher reserviert werden?
-- Kompaktifizierung verwenden?
-- Minimierung des Fragmentierungsproblems
-
-==== Ersetzungsstrategie
-
-- Welcher Speicherbereich könnte Sinnvoll ausgelagert werden?
-
 == Signale
 
 virtuelle Ausnahme des Prozessors
@@ -1305,3 +1274,341 @@ Festlegung von Prozessvorrang durch Verfahren
 Problem der Abschätzung bei probabilistischen Verfahren
 
 #image("Scheduling-Verfahren.png")
+
+== Speicher
+
+=== Hierarchie
+
++ Intern: Register, Cache
++ Vordergrundspricher: RAM, ROM, Flash
++ Hintergrundspeicher: Festplatte, Solid-State-Disk
++ Wechselspeicher: Magnetband, DVD, Blu-Ray, USB-Stick
++ Netzwerkspeicher: Netzwerklaufwerk/-dateisystem, Cloud-Speicher
+
+- steigende Zugriffzeiten
+- steigende Kapazität
+- sinkender Preis pro Bit
+
+=== Verwaltung
+
+==== Adressabbildung
+
+- logische Adressen auf physische Adressen
+- Relokation von Code und Daten
+
+==== Platzierungsstrategie
+
+- In welcher Lücke soll Speicher reserviert werden?
+- Kompaktifizierung verwenden?
+- Minimierung des Fragmentierungsproblems
+
+==== Ersetzungsstrategie
+
+- Welcher Speicherbereich könnte Sinnvoll ausgelagert werden?
+
+=== Speicherinteraktionen
+
+==== aktives Warten
+
+Prozessinteraktionen über gemeinsamen Speicher
+- Konsistenzprobleme bei nichtatomaren Zugriff
+    - "kritisches Gebiet"
+- gemeinsamer Speicher
+    - exklusives Betriebsmittel
+-> Synchronisation erforderlich
+
+Ideal: Verwendung atomarer Maschinenbefehle
+- einzelner read/write Befehl ist auf Maschinenebene #E2 atomar
+- spezielle read-modify-write Befehle sind ebenfalls atomar
+- TAS, CAS, FAA: architekturabhängig
+    - Unterstützung im Compiler durch Intrinsics
+-> Lösung nicht verallgemeinerbar
+
+Alternative: expliziter gegenseitiger Ausschluss (mutual exclusion, Mutex)
+- Mutex mit spin lock, spin-on-read, ticket lock
+- Protokoll mit `lock`, `unlock`, und Schlossvariable
+    - aktives Warten in `lock`
+- ineffizient bei virtuellem Prozessor
+    - Verschwendung der Zeitscheibe
+- kritische Implementierung
+    - nichtfunktionale Effekte (Cache, Speicherbus)
+
+===== gegenseitiger Ausschluss mit Mutex
+
+#E3 Realisierung
+- zeitweiser exklusiver Zugang zur geteilten Variable durch wechselseitigen Ausschluss
+- Prozess ist während des Zugriffs im "kritischen Bereich"
+- "Überwachung" des kritischen Bereichs durch Sperrobjekt (Mutex)
+- Elementaroperationen
+    - acquire/lock
+        - Betritt des kritischen Gebietes
+        - falls nötig, Warten bis Mutex frei ist
+    - release/unlock
+        - Freigabe und Verlassen des kritischen Gebietes
+
+Es gilt $sum "acquire" ( "mutex" ) - sum "release" ( "mutex" ) lt.eq 1$\
+-> maximal ein Prozess im Kritischen Bereich, weitere Prozesse warten
+
+====== Realisierung durch Verdrängnissperre
+
+Ansatz: Unterbindung von Verdrängungen
+- z.B. Sperrung von Unterbrechungen im kritischen Gebiet
+
+möglich, aber viele Nachteile
+- Aufwendig
+    - Erfordert privilegierte Operationen
+- Fehleranfällig
+    - Monopolisierung des Prozessors
+    - Verlorene Ereignisse durch hohe Unterbrechungslatenz
+- Grobgranular
+    - Bestrafung unbeteiligter Prozesse
+- Eingeschränkt
+    - Funktioniert nicht bei echter Parallelität
+
+====== Realisierung durch Spinlock
+
+nicht sicher
+- Eintritt mehrerer Threads in das kritische Gebiet möglich
+    - Schreiben der Schlossvariable nach dem Eintritt eines anderen Threads
+
+===== atomare Komplexbefehle (TAS, CAS, FAA)
+
+====== Test-And-Set (TAS)
+
+#E2 Elementaroperation: test-and-set
+
+Schlossvariable prüfen und setzen = read-modify-write Operation
+
+#underline([Pseudocode]) der TAS-Operation (Befehlssatzebene)
+```C
+int TAS(long* ref) {
+    atomic {
+        long aux = *ref;
+        *ref = 1;
+    }
+    return aux;
+}
+```
+
+Schreiben ist garantiert, Wertveränderung nur bedingt
+- nur wenn Variable 0 enthält
+- ansonsten wird der Wert 1 mit 1 überschrieben
+
+Operationsergebnis: Variablenwert vor der Operation
+- Ausschluss gleichzeitiger Buszugriffe vor der Operation durch Hardware
+- Synchronisation auch mit anderen Busmastern (andere CPU, DMA,...)
+-> TAS bewirkt einen atomaren Lese-/Schreibzyklus
+
+======= Spinlock mit TAS
+
+```C
+typedef volatile long lock_t;
+
+void acquire(lock_t* lock) {
+    while( TAS(lock) ) {}
+}
+
+void release(lock_t* lock) {
+    *lock = 0;
+}
+```
+
+Funktionsfähig, aber sehr hohe Last auf den Cache bei Wettstreit im Multi-Core system
+- angenommen n Prozessoren wollen in das kritische Gebiet
+- Auslösen von massiven Datentransfer durch unbedingtes Schreiben von TAS. Entweder
+    - write-through-cache: 1 Original schreiben, n-1 Kopien bei anderen Prozessoren aktualisieren
+    - write-back-cache: n-1 Kopien invalidieren und 1 Original zum auslösenden Prozessor bewegen
+- Außerden: hohe Last auf Speicherbus
+- Ausbremsung von unabhängigen Prozessen und Prozessoren
+
+-> schlechte Skalierung in nichtfunktionaler Sicht
+
+====== Compare-And-Swap (CAS)
+
+#E2 Elementaroperation: comapre-and-swap
+
+#underline([Pseudocode]) der CAS-Operation
+```C
+int CAS(long* var, long val, long new) {
+    atomic {
+        if (*var == val) {
+            *var = new;
+            return 1;
+        }
+    }
+    return 0;
+}
+```
+Schreiben des neuen Wertes, wenn `*var` den erwarteten Wert hat
+
+Weniger Verbreitet, aber auf vielen Platformen verfügbar
+
+======= Spinlock mit CAS
+
+```C
+typedef volatile long lock_t;
+
+void acquire(lock_t* lock) {
+    while( !CAS(lock, 0, 1) ) {}
+}
+
+void release(lock_t* lock) {
+    *lock = 0;
+}
+```
+Schreiben nur bei Belegung des Mutex
+- deutlich bessere Cachekohärenz
+- weiterhin viele Zugriffe auf den Speicherbus
+
+-> schlechte Skalierung in nichtfunktionaler Sicht
+
+======= besseres Spinlock mit CAS
+
+```C
+typedef volatile long lock_t;
+
+void acquire(lock_t* lock) {
+    do {
+        while( *lock ) {}
+        while( !CAS(lock, 0, 1) ) {}
+    }
+}
+
+void release(lock_t* lock) {
+    *lock = 0;
+}
+```
+
+Weniger Wettstreit auf dem Speicherbus durch spin-on-read
+- innere while-Schleife arbeitet auf dem Cache (ohne ihn zu ändern)
+- in dieser Zeit keine Datenzugriffe und keine Bus-Sperren
+
+-> deutlich besser skalierbare Lösung
+
+====== Fetch-And-Add (FAA)
+
+#E2 Elementaroperation: fetch-and-add
+
+TAS & CAS ermöglichen Verhungern
+- hoher Wettstreit garantiert kein Durchkommen
+- zufällige Reihenfolge
+
+#underline([Pseudocode]) der FAA-Operation
+```C
+long FAA(long* var, long add) {
+    atomic {
+        long aux = *var;
+        *var += add;
+    }
+    return aux;
+}
+```
+
+- Operationsergebnis ist Variablenwert vor der Erhöhung
+- weniger Verbreitet als TAS und CAS
+    - manche Platformen: nur fetch-and-increment (Erhöhung um 1)
+        - ebenfalls ausreichend
+
+======= Mutex mit FAA
+
+```C
+typedef volatile struct {
+    long next;
+    long this;
+} lock_t;
+
+void acquire(lock_t* lock) {
+    long self = FAA(&lock->next, 1);
+    while( self > lock->this ) {}
+}
+
+void release(lock_t* lock) {
+    lock->this++;
+}
+```
+- "ticket lock"
+
+- Kein Verhungern
+- Vorraussetzung: Kein "Ausstieg" der Wartenden
+    - Threads warten auf den Vorgänger, Austritt führt zu einem Deadlock
+
+==== passives Warten
+
+Wechsel in den blockiert-Zustand vor dem kritischen Gebiet
+- freiwillige Abgabe des Prozessors
+- Versetzung in den bereit-Zustand durch den Prozess, welcher das kritische Gebiet verlässt
+    - erneuter Eintrittsversuch
+-> Modifikation der Prozesszustände nötig\
+->privilegierte Operation\
+=> Implementation der Synchronisationsprimitiven im Betribssystem-Kern
+
+===== Semaphor
+
+Vorschlag von Dijkstra (1964)
+
+spezielle ganzzahlige Variable mit zwei Operationen
+- P (prolaag) (down, wait, acquire, `sem_wait`)
+    - Verringerung der Semaphor s um 1
+    - Blockade des Prozesses, wenn s < 0
+- V (verhoog) (up, signal, release, `sem_post`)
+    - Erhöhung der Semaphor s um 1
+    - ggfs. Bereitstellung eines blockierten Prozesses
+
+ursprüngliche Definition: binäre Semaphor $s in {0,1}$\
+spätere Verallgemeinerung: zählende Semaphor $s in ZZ$
+
+====== Implementation: zählende Semaphor
+
+```C
+typedef volatile int semaphore_t;
+
+void down(semaphore_t* sema) {
+    atomic {
+        *sema--;
+        if (*sema < 0) {
+            block(sema);
+        }
+    }
+}
+
+void up(semaphore_t* sema) {
+    atomic {
+        *sema++;
+        if (*sema <= 0) {
+            wakeup(sema);
+        }
+    }
+}
+```
+
+Implementatierung der Unteilbarkeit (atomic) durch Betribssystem-Kern.\
+Varianten von atomic
+- Unterbrechungssperren
+    - `up` kann aus Unterbrechungsbehandlern aufgerufen werden
+- nichtverdrängbares kritisches Gebiet
+    - "non-premptible critical section", NPCS
+    - kein Entzug des Prozessors von Faden im kritischen Gebiet
+- Multiprozessorfall zusätzlich:
+    - spin lock
+- Einsatz von atomaren Befehlen
+
+====== Erzeuger-Verbraucher mit Semaphor (Ringbuffer)
+
+koordinierter Zugriff auf konsumierbare Betriebsmittel
+- Erzeuger produziert Elemente
+- Verbraucher konsumiert Elemente
+- Entkopplung durch Ringpuffer
+
+Erzeuger
+- Ablegen von Elementen im Puffer
+- Warten, wenn Puffer voll ist
+
+Verbraucher
+- Entnahme von Elementen aus dem Puffer
+- Warten, wenn Puffer leer ist
+
+semantisch ein Betriebsmittel, in der Realisierung zwei
+- Erzeuger: produziert Elemente, verbraucht Pufferplätze
+- Verbraucher: produziert Pufferplätze, verbraucht Elemente
+
+=> Realisierung mit zwei zählenden Semaphorn
