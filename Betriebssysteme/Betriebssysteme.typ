@@ -1,4 +1,4 @@
-#set text(font: "Inter", size: 1.25em)
+#set text(font: "Inter", size: 1.25em, lang: "de")
 #set grid(column-gutter: 1em, row-gutter: 1em)
 #set page(margin: 4em)
 #set quote(block: true) // actually show attribution in quotes
@@ -9,7 +9,7 @@
 #let E2 = $E_2$
 #let E3 = $E_3$
 
-#align(center, text([Software Engineering], weight: "bold", size: 16pt))
+#align(center, text([Betriebssysteme], weight: "bold", size: 16pt))
 
 #outline()
 

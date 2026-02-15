@@ -1,6 +1,6 @@
 // #set text(font: "Inter", fill: white)
 // #set page(fill: black)
-#set text(font: "Inter", size: 1.25em)
+#set text(font: "Inter", size: 1.25em, lang: "de")
 #set grid(column-gutter: 1em, row-gutter: 1em)
 #set page(margin: 4em)
 
